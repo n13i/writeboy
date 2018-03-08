@@ -1,0 +1,4 @@
+Copyright (C) 2018 n13i
+
+This software is licensed under a Creative Commons Attribution-NonCommercial 4.0 International license.
+https://creativecommons.org/licenses/by-nc/4.0/
