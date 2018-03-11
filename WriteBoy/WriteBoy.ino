@@ -157,15 +157,15 @@ void dump_sram()
   Serial.print(cart.ram_banks, DEC);
   Serial.print(" banks\n");
 
-  // RAM Enable
-  io_write_byte(0x0000, 0x0a);
-
   byte buf[READ_BUF];
 
   unsigned int base_addr = 0xa000;
   for (unsigned int bank = 0; bank < cart.ram_banks; bank++)
   {
     cart_ram_bank_select(cart, bank);
+
+    // RAM Enable
+    io_write_byte(0x0000, 0x0a);
 
     for (unsigned int addr = 0; addr < cart.ram_bytes_per_bank; addr += READ_BUF)
     {
@@ -181,10 +181,10 @@ void dump_sram()
       }
       Serial.write(buf, READ_BUF);
     }
-  }
 
-  // RAM Disable
-  io_write_byte(0x0000, 0x00);
+    // RAM Disable
+    io_write_byte(0x0000, 0x00);
+  }
 }
 
 void write_sram()
@@ -203,15 +203,15 @@ void write_sram()
   Serial.print(cart.ram_banks, DEC);
   Serial.print(" banks\n");
 
-  // RAM Enable
-  io_write_byte(0x0000, 0x0a);
-
   byte buf[WRITE_BUF];
 
   unsigned int base_addr = 0xa000;
   for (unsigned int bank = 0; bank < cart.ram_banks; bank++)
   {
     cart_ram_bank_select(cart, bank);
+
+    // RAM Enable
+    io_write_byte(0x0000, 0x0a);
 
     for (unsigned int addr = 0; addr < cart.ram_bytes_per_bank; addr += WRITE_BUF)
     {
@@ -252,15 +252,15 @@ void write_sram()
       Serial.print("\n");
     }
 
+    // RAM Disable
+    io_write_byte(0x0000, 0x00);
+
     //Serial.print("+OK Wrote RAM bank ");
     //Serial.print(bank, DEC);
     //Serial.print("/");
     //Serial.print(cart.ram_banks - 1, DEC);
     //Serial.print("\n");
   }
-
-  // RAM Disable
-  io_write_byte(0x0000, 0x00);
 }
 
 void dump_gbmc_rom()
