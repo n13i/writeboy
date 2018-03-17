@@ -316,14 +316,14 @@ void cart_gbmc_enable_mbc_registers()
 // CMD_8xh: Map x with Reset
 void cart_gbmc_map_game_with_reset(byte game)
 {
-  io_write_byte(0x0120, 0x80 & (game & 0x07));
+  io_write_byte(0x0120, 0x80 | (game & 0x07));
   io_write_byte(0x013f, 0xa5);
 }
 
 // CMD_Cxh: Map x without Reset
 void cart_gbmc_map_game_without_reset(byte game)
 {
-  io_write_byte(0x0120, 0xc0 & (game & 0x07));
+  io_write_byte(0x0120, 0xc0 | (game & 0x07));
   io_write_byte(0x013f, 0xa5);
 }
 
