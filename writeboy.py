@@ -138,7 +138,7 @@ def dump_rom(args, ser):
     check_logo(info, skip_check=args.skip_check)
 
     send_request(ser, 'DUMP ROM')
-    receive_response(ser)
+    receive_response(ser, args.verbose)
 
     receive_image(ser, get_filename(info, 'gb', args.filename))
     return
@@ -149,7 +149,7 @@ def dump_gbmc_rom(args, ser):
     check_logo(info, skip_check=args.skip_check)
 
     send_request(ser, 'DUMP GBMCROM')
-    receive_response(ser)
+    receive_response(ser, args.verbose)
 
     receive_image(ser, get_filename(info, 'gb', args.filename))
     return
@@ -159,8 +159,12 @@ def dump_sram(args, ser):
     show_info(info)
     check_logo(info, skip_check=args.skip_check)
 
-    send_request(ser, 'DUMP SRAM')
-    receive_response(ser)
+    if args.title != None:
+        send_request(ser, 'DUMP SRAM ' + args.title)
+    else:
+        send_request(ser, 'DUMP SRAM')
+
+    receive_response(ser, args.verbose)
 
     receive_image(ser, get_filename(info, 'sav', args.filename))
     return
@@ -171,7 +175,7 @@ def dump_mapping(args, ser):
     check_logo(info, skip_check=args.skip_check)
 
     send_request(ser, 'DUMP MAPPING')
-    receive_response(ser)
+    receive_response(ser, args.verbose)
 
     receive_image(ser, get_filename(info, 'map', args.filename))
     return
@@ -182,7 +186,7 @@ def dump_gbmc_titles(args, ser):
     check_logo(info, skip_check=args.skip_check)
 
     send_request(ser, 'DUMP TITLES')
-    receive_response(ser)
+    receive_response(ser, args.verbose)
 
     while 1:
         buf = ser.readline()
@@ -197,7 +201,11 @@ def write_sram(args, ser):
     show_info(info)
     check_logo(info, skip_check=args.skip_check)
 
-    send_request(ser, 'WRITE SRAM')
+    if args.title != None:
+        send_request(ser, 'WRITE SRAM ' + args.title)
+    else:
+        send_request(ser, 'WRITE SRAM')
+
     receive_response(ser, args.verbose)
 
     send_image(ser, get_filename(info, 'sav', args.filename))
@@ -320,6 +328,9 @@ parser.add_argument('--dump-gbmc-titles',
 parser.add_argument('--write-sram',
                     dest='action', action='store_const', const=write_sram,
                     help='write SRAM')
+parser.add_argument('--title',
+                    nargs='?', default=None,
+                    help='specify the title number (1..7) of desired to read/write SRAM in GBMC MULTI CARTRIDGE')
 parser.add_argument('--write-gbmc-rom',
                     dest='action', action='store_const', const=write_gbmc_rom,
                     help='write ROM to GBMC')

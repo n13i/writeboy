@@ -58,11 +58,37 @@ void loop()
   }
   else if(strstr(cmd, "DUMP SRAM"))
   {
-    dump_sram();
+    int title = 0;
+    if (cmd[9] == ' ' && cmd[11] == '\0')
+    {
+      if (cmd[10] >= '1' && cmd[10] <= '7')
+      {
+        title = (cmd[10] - '1') + 1;
+      }
+      else
+      {
+        Serial.print("-ERR unknown title number\n");
+        return;
+      }
+    }
+    dump_sram(title);
   }
   else if(strstr(cmd, "WRITE SRAM"))
   {
-    write_sram();
+    int title = 0;
+    if (cmd[10] == ' ' && cmd[12] == '\0')
+    {
+      if (cmd[11] >= '1' && cmd[11] <= '7')
+      {
+        title = (cmd[11] - '1') + 1;
+      }
+      else
+      {
+        Serial.print("-ERR unknown title number\n");
+        return;
+      }
+    }
+    write_sram(title);
   }
   else if(strstr(cmd, "DUMP GBMCROM"))
   {
@@ -145,13 +171,22 @@ void dump_rom()
   }
 }
 
-void dump_sram()
+void dump_sram(int title)
 {
+  if (!select_title(title))
+  {
+    Serial.print("+ERR Failed to select title ");
+    Serial.print(title, DEC);
+    Serial.print("\n");
+    return;
+  }
+
   cart_info_t cart = cart_get_info();
 
   if (cart.ram_banks == 0 || cart.mbc == UNKNOWN)
   {
     Serial.print("+ERR No SRAM or unknown MBC\n");
+    select_title(0);
     return;
   }
 
@@ -189,15 +224,26 @@ void dump_sram()
     // RAM Disable
     io_write_byte(0x0000, 0x00);
   }
+
+  select_title(0);
 }
 
-void write_sram()
+void write_sram(int title)
 {
+  if (!select_title(title))
+  {
+    Serial.print("+ERR Failed to select title ");
+    Serial.print(title, DEC);
+    Serial.print("\n");
+    return;
+  }
+
   cart_info_t cart = cart_get_info();
 
   if (cart.ram_banks == 0 || cart.mbc == UNKNOWN)
   {
     Serial.print("+ERR No SRAM or unknown MBC\n");
+    select_title(0);
     return;
   }
 
@@ -265,6 +311,8 @@ void write_sram()
     //Serial.print(cart.ram_banks - 1, DEC);
     //Serial.print("\n");
   }
+
+  select_title(0);
 }
 
 void dump_gbmc_rom()
@@ -709,4 +757,24 @@ void dump_gbmc_titles()
 
   cart_gbmc_map_game_without_reset(0);
   cart_gbmc_disable_np_registers();
+}
+
+boolean select_title(int title)
+{
+  if (title > 0 && !cart_is_gbmc())
+  {
+    return false;
+  }
+
+  if (title < 0 || title > 7)
+  {
+    return false;
+  }
+
+  cart_gbmc_enable_np_registers();
+  cart_gbmc_map_game_without_reset(title);
+  delay(100);
+  cart_gbmc_disable_np_registers();
+
+  return true;
 }
