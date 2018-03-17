@@ -72,6 +72,10 @@ void loop()
   {
     dump_gbmc_mapping();
   }
+  else if(strstr(cmd, "DUMP TITLES"))
+  {
+    dump_gbmc_titles();
+  }
   else if(strstr(cmd, "WRITE MAPPING"))
   {
     write_gbmc_mapping();
@@ -301,14 +305,8 @@ void dump_gbmc_rom()
   }
 }
 
-void dump_gbmc_mapping()
+void get_gbmc_mapping(byte (&map)[128])
 {
-  if (!cart_is_gbmc())
-  {
-    Serial.print("-ERR cart is not GBMC\n");
-    return;
-  }
-
   cart_gbmc_enable_np_registers();
   cart_gbmc_disable_write_protect();
 
@@ -322,11 +320,9 @@ void dump_gbmc_mapping()
   io_write_byte(0x3000, 0x00);
   io_write_byte(0x2100, 0x00);
 
-  Serial.print("+OK Start dumping GBMC mapping\n");
-
   for (int i = 0; i < 128; i++)
   {
-    Serial.write(io_read_byte(i));
+    map[i] = io_read_byte(i);
   }
 
   // reset flash
@@ -337,6 +333,25 @@ void dump_gbmc_mapping()
 
   cart_gbmc_map_game_without_reset(0);
   cart_gbmc_disable_np_registers();
+}
+
+void dump_gbmc_mapping()
+{
+  if (!cart_is_gbmc())
+  {
+    Serial.print("-ERR cart is not GBMC\n");
+    return;
+  }
+
+  byte map[128];
+  get_gbmc_mapping(map);
+
+  Serial.print("+OK Start dumping GBMC mapping\n");
+
+  for (int i = 0; i < 128; i++)
+  {
+    Serial.write(map[i]);
+  }
 }
 
 void write_gbmc_rom()
@@ -617,6 +632,80 @@ void write_gbmc_mapping()
   cart_gbmc_disable_mbc_registers();
   cart_gbmc_send_flash_cmd(0xf0);
   cart_gbmc_enable_mbc_registers();
+
+  cart_gbmc_map_game_without_reset(0);
+  cart_gbmc_disable_np_registers();
+}
+
+void dump_gbmc_titles()
+{
+  if (!cart_is_gbmc())
+  {
+    Serial.print("-ERR cart is not GBMC\n");
+    return;
+  }
+
+  byte map[128];
+  get_gbmc_mapping(map);
+
+  cart_gbmc_enable_np_registers();
+  cart_gbmc_map_game_without_reset(0);
+  cart_gbmc_disable_np_registers();
+
+  for (int i = 0; i < 86; i++)
+  {
+    if (map[i + 0x18] != 0xff)
+    {
+      Serial.print("-ERR cart is not GBMC MULTI CARTRIDGE\n");
+      return;
+    }
+  }
+
+  Serial.print("+OK start title list\n");
+
+  cart_gbmc_enable_np_registers();
+  cart_gbmc_map_entire();
+
+  for (int n = 1; n <= 8; n++)
+  {
+    if (map[n * 3] == 0xff)
+    {
+      continue;
+    }
+
+    // get rom start bank (16kB * offset * 2)
+    byte bank = (map[n * 3 + 1] & 0x7f) * 2;
+
+    // switch bank
+    io_write_byte(0x2100, bank);
+
+    // get title
+    byte title_raw[16];
+    char title[17];
+    for (int i = 0; i < 16; i++)
+    {
+      title_raw[i] = io_read_byte(0x4134 + i);
+      title[i] = (0x7f & title_raw[i]);
+    }
+    title[16] = '\0';
+
+    if (title_raw[15] >= 0x80)
+    {
+      if (title_raw[14] != 0x00)
+      {
+        title[11] = '\0';
+      }
+      else
+      {
+        title[15] = '\0';
+      }
+    }
+
+    Serial.print(n, DEC);
+    Serial.print(":[");
+    Serial.print(title);
+    Serial.print("]\n");
+  }
 
   cart_gbmc_map_game_without_reset(0);
   cart_gbmc_disable_np_registers();

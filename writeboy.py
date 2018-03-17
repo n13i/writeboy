@@ -176,6 +176,22 @@ def dump_mapping(args, ser):
     receive_image(ser, get_filename(info, 'map', args.filename))
     return
 
+def dump_gbmc_titles(args, ser):
+    info = get_info(ser)
+    show_info(info)
+    check_logo(info, skip_check=args.skip_check)
+
+    send_request(ser, 'DUMP TITLES')
+    receive_response(ser)
+
+    while 1:
+        buf = ser.readline()
+        if len(buf) == 0:
+            break
+        print(buf.decode(), end='')
+
+    return
+
 def write_sram(args, ser):
     info = get_info(ser)
     show_info(info)
@@ -298,6 +314,9 @@ parser.add_argument('--dump-gbmc-rom',
 parser.add_argument('--dump-gbmc-mapping',
                     dest='action', action='store_const', const=dump_mapping,
                     help='dump mapping from GBMC')
+parser.add_argument('--dump-gbmc-titles',
+                    dest='action', action='store_const', const=dump_gbmc_titles,
+                    help='dump titles in GBMC MULTI CARTRIDGE')
 parser.add_argument('--write-sram',
                     dest='action', action='store_const', const=write_sram,
                     help='write SRAM')
