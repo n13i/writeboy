@@ -161,6 +161,8 @@ def dump_sram(args, ser):
 
     if args.title != None:
         send_request(ser, 'DUMP SRAM ' + args.title)
+    elif args.limit_sram_32k:
+        send_request(ser, 'DUMP SRAM32K')
     else:
         send_request(ser, 'DUMP SRAM')
 
@@ -203,12 +205,14 @@ def write_sram(args, ser):
 
     if args.title != None:
         send_request(ser, 'WRITE SRAM ' + args.title)
+    elif args.limit_sram_32k:
+        send_request(ser, 'WRITE SRAM32K')
     else:
         send_request(ser, 'WRITE SRAM')
 
     receive_response(ser, args.verbose)
 
-    send_image(ser, get_filename(info, 'sav', args.filename))
+    send_image(ser, get_filename(info, 'sav', args.filename), limit_32k=args.limit_sram_32k)
     return
 
 def write_gbmc_rom(args, ser):
@@ -280,7 +284,7 @@ def receive_image(ser, filename):
     f.close()
     return
 
-def send_image(ser, filename, verbose=False):
+def send_image(ser, filename, verbose=False, limit_32k=False):
     print('Target file: {0}'.format(filename))
     f = open(filename, 'rb')
     count = 0
@@ -295,6 +299,8 @@ def send_image(ser, filename, verbose=False):
         count += 1
         print('\r {0} Sent {1:4d} kbytes ({2:7d} bytes)'.format(rotor[count % 4], int(byte/1024), byte), end='')
         sys.stdout.flush()
+        if limit_32k and byte >= 32768:
+            break
     print('\rOK Sent {0:4d} kbytes ({1:7d} bytes)'.format(int(byte/1024), byte))
     f.close()
     return
@@ -340,6 +346,9 @@ parser.add_argument('--write-gbmc-mapping',
 parser.add_argument('--skip-check',
                     dest='skip_check', action='store_true',
                     help='skip header check (may produce corrupted rom image)')
+parser.add_argument('--limit-sram-32k',
+                    dest='limit_sram_32k', action='store_true',
+                    help='stop reading/writing SRAM when bytes reaches 32k, regardless of the SRAM size value specified in cartridge header (for LSDj)')
 parser.add_argument('--verbose',
                     dest='verbose', action='store_true',
                     help='show verbose log')

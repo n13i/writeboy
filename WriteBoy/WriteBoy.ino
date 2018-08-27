@@ -59,6 +59,11 @@ void loop()
   else if(strstr(cmd, "DUMP SRAM"))
   {
     int title = 0;
+    unsigned int limit_dump_bytes = 0;
+    if (strstr(cmd, "DUMP SRAM32K"))
+    {
+      limit_dump_bytes = 32768;
+    }
     if (cmd[9] == ' ' && cmd[11] == '\0')
     {
       if (cmd[10] >= '1' && cmd[10] <= '7')
@@ -71,11 +76,16 @@ void loop()
         return;
       }
     }
-    dump_sram(title);
+    dump_sram(title, limit_dump_bytes);
   }
   else if(strstr(cmd, "WRITE SRAM"))
   {
     int title = 0;
+    unsigned int limit_write_bytes = 0;
+    if (strstr(cmd, "WRITE SRAM32K"))
+    {
+      limit_write_bytes = 32768;
+    }
     if (cmd[10] == ' ' && cmd[12] == '\0')
     {
       if (cmd[11] >= '1' && cmd[11] <= '7')
@@ -88,7 +98,7 @@ void loop()
         return;
       }
     }
-    write_sram(title);
+    write_sram(title, limit_write_bytes);
   }
   else if(strstr(cmd, "DUMP GBMCROM"))
   {
@@ -171,11 +181,11 @@ void dump_rom()
   }
 }
 
-void dump_sram(int title)
+void dump_sram(int title, unsigned int limit_dump_bytes)
 {
   if (!select_title(title))
   {
-    Serial.print("+ERR Failed to select title ");
+    Serial.print("-ERR Failed to select title ");
     Serial.print(title, DEC);
     Serial.print("\n");
     return;
@@ -185,7 +195,7 @@ void dump_sram(int title)
 
   if (cart.ram_banks == 0 || cart.mbc == UNKNOWN)
   {
-    Serial.print("+ERR No SRAM or unknown MBC\n");
+    Serial.print("-ERR No SRAM or unknown MBC\n");
     select_title(0);
     return;
   }
@@ -194,10 +204,18 @@ void dump_sram(int title)
   Serial.print(cart.ram_bytes_per_bank, DEC);
   Serial.print(" bytes * ");
   Serial.print(cart.ram_banks, DEC);
-  Serial.print(" banks\n");
+  Serial.print(" banks");
+  if (limit_dump_bytes > 0)
+  {
+    Serial.print(", limited to ");
+    Serial.print(limit_dump_bytes, DEC);
+    Serial.print(" bytes");
+  }
+  Serial.print("\n");
 
   byte buf[READ_BUF];
 
+  unsigned int dump_bytes = 0;
   unsigned int base_addr = 0xa000;
   for (unsigned int bank = 0; bank < cart.ram_banks; bank++)
   {
@@ -219,20 +237,27 @@ void dump_sram(int title)
         }
       }
       Serial.write(buf, READ_BUF);
+
+      dump_bytes += READ_BUF;
     }
 
     // RAM Disable
     io_write_byte(0x0000, 0x00);
+
+    if (limit_dump_bytes > 0 && dump_bytes >= limit_dump_bytes)
+    {
+      break;
+    }
   }
 
   select_title(0);
 }
 
-void write_sram(int title)
+void write_sram(int title, unsigned int limit_write_bytes)
 {
   if (!select_title(title))
   {
-    Serial.print("+ERR Failed to select title ");
+    Serial.print("-ERR Failed to select title ");
     Serial.print(title, DEC);
     Serial.print("\n");
     return;
@@ -242,7 +267,7 @@ void write_sram(int title)
 
   if (cart.ram_banks == 0 || cart.mbc == UNKNOWN)
   {
-    Serial.print("+ERR No SRAM or unknown MBC\n");
+    Serial.print("-ERR No SRAM or unknown MBC\n");
     select_title(0);
     return;
   }
@@ -251,10 +276,18 @@ void write_sram(int title)
   Serial.print(cart.ram_bytes_per_bank, DEC);
   Serial.print(" bytes * ");
   Serial.print(cart.ram_banks, DEC);
-  Serial.print(" banks\n");
+  Serial.print(" banks");
+  if (limit_write_bytes > 0)
+  {
+    Serial.print(", limited to ");
+    Serial.print(limit_write_bytes, DEC);
+    Serial.print(" bytes");
+  }
+  Serial.print("\n");
 
   byte buf[WRITE_BUF];
 
+  unsigned int write_bytes = 0;
   unsigned int base_addr = 0xa000;
   for (unsigned int bank = 0; bank < cart.ram_banks; bank++)
   {
@@ -300,6 +333,8 @@ void write_sram(int title)
       Serial.print("/");
       Serial.print(cart.ram_banks - 1, DEC);
       Serial.print("\n");
+
+      write_bytes += WRITE_BUF;
     }
 
     // RAM Disable
@@ -310,6 +345,11 @@ void write_sram(int title)
     //Serial.print("/");
     //Serial.print(cart.ram_banks - 1, DEC);
     //Serial.print("\n");
+
+    if (limit_write_bytes > 0 && write_bytes >= limit_write_bytes)
+    {
+      break;
+    }
   }
 
   select_title(0);
